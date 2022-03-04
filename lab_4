@@ -1,11 +1,17 @@
 import pygame
 from pygame.draw import *
 from random import randint
+
+from pygame.examples.prevent_display_stretching import event
+
 pygame.init()
 
-FPS = 2
-COUNTER = 0;
-screen = pygame.display.set_mode((1200, 900))
+HEIGHT = 1000
+WIDTH = 1920
+N = 99  # Количесво шаров
+FPS = 60
+COUNTER = 0
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
@@ -16,24 +22,103 @@ CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
 COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN]
 
+"""
+class element:
+    x: float
+    y: float
+    v_x: float
+    v_y: float
+    r: float
+    color: str"""
+
+
+def points(counter, x, y, v_x, v_y, r, color):
+    if abs(event.pos[1] - y) < r and abs(event.pos[0] - x) < r:
+        counter += 1
+        print('Points: ', counter)
+    return counter
+
 
 def new_ball():
-    """рисует новый шарик """
-    global x, y, r
-    x = randint(100, 1100)
-    y = randint(100, 900)
+    """создаёт новый шарик """
+    x = randint(0, WIDTH)
+    y = randint(0, HEIGHT)
     r = randint(10, 100)
+    v_x = randint(-20, 20)
+    v_y = randint(-20, 20)
     color = COLORS[randint(0, 5)]
+    return [x, y, v_x, v_y, r, color]
+
+
+def new_star():
+    """создаёт новый шарик """
+    x = randint(0, WIDTH)
+    y = randint(0, HEIGHT)
+    r = randint(10, 100)
+    v_x = randint(-20, 20)
+    v_y = randint(-20, 20)
+    color = COLORS[randint(0, 5)]
+    return [x, y, v_x, v_y, r, color]
+
+
+def rendering_ball(x, y, v_x, v_y, r, color):
+    """отрисовывает новый шарик """
     circle(screen, color, (x, y), r)
 
 
-def click(event):
-    print(x, y, r)
+def moving_ball(x, y, v_x, v_y, r, color):
+    """перемещаю новый шарик """
+    t = 0.1
+    return [x + v_x * t, y + v_y * t, v_x, v_y, r, color]
+
+
+def click(x, y, v_x, v_y, r, color):
+    if abs(event.pos[1] - y) < r and abs(event.pos[0] - x) < r:
+        x = randint(100, 1100)
+        y = randint(100, 900)
+        r = randint(10, 100)
+        v_x = randint(-20, 20)
+        v_y = randint(-20, 20)
+        color = COLORS[randint(0, 5)]
+    return [x, y, v_x, v_y, r, color]
+
+
+def hitting_the_wall(x, y, v_x, v_y, r, color):
+    """проверяет шарик на соудорение со стеной и возращает новые данные шарика"""
+    if WIDTH <= x + r or x - r <= 0:
+        if v_x != 0:
+            return [x, y, -v_x * randint(0, 20) / abs(v_x), v_y, r, color]
+        else:
+            return [x, y, randint(-20, 20), v_y, r, color]
+    elif HEIGHT <= y + r or y - r <= 0:
+
+        if v_y != 0:
+            return [x, y, v_x, -v_y * randint(0, 20) / abs(v_y), r, color]
+        else:
+            return [x, y, v_x, randint(-20, 20), r, color]
+    else:
+        return [x, y, v_x, v_y, r, color]
+
+
+def crutch(x, y, v_x, v_y, r, color):
+    if x < r:
+        x = r
+    if x > WIDTH - r:
+        x = WIDTH - r
+    if y < r:
+        y = r
+    if y > HEIGHT - r:
+        y = HEIGHT - r
+    return x, y, v_x, v_y, r, color
 
 
 pygame.display.update()
 clock = pygame.time.Clock()
 finished = False
+A = []
+
+for i in range(N):
+    A.append(new_ball())
 
 while not finished:
     clock.tick(FPS)
@@ -41,8 +126,17 @@ while not finished:
         if event.type == pygame.QUIT:
             finished = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            print('Click!')
-    new_ball()
+            for i in range(N):
+                COUNTER = points(COUNTER, A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
+                A[i] = click(A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
+    for i in range(N):
+
+        A[i] = moving_ball(A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
+
+        A[i] = crutch(A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
+
+        A[i] = hitting_the_wall(A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
+        rendering_ball(A[i][0], A[i][1], A[i][2], A[i][3], A[i][4], A[i][5])
     pygame.display.update()
     screen.fill(BLACK)
 
