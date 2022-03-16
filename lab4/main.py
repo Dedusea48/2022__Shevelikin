@@ -19,23 +19,46 @@ GREEN = (0, 255, 0)
 MAGENTA = (255, 0, 255)
 CYAN = (0, 255, 255)
 BLACK = (0, 0, 0)
-COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN, (255, 102, 0), (102, 102, 153), (255, 153, 0), (255, 153, 204),
-          (204, 255, 204)]
+COLORS = [RED, BLUE, YELLOW, GREEN, MAGENTA, CYAN,
+          (255, 102, 0), (102, 102, 153), (255, 153, 0), (204, 255, 204), (255, 153, 204)]
 
 
 class Player:
-
     def __init__(self):
-        self.point = 0
+        self.point: int = 0
+        self.name = '000'
 
     def add_points(self, points):
+        """
+        Increases the player's score by points
+        """
         self.point += points
 
     def pick_up_points(self, points):
+        """Decreases the player's score by points"""
         self.point -= points
 
+    def change_points(self, points):
+        self.point = points
+
     def points(self):
+        """
+        :return: player's score
+        """
         return self.point
+
+    def rename(self):
+        """
+        code:
+        self.name = input()
+        """
+        self.name = input()
+
+    def say_name(self):
+        """
+        :return: str(self.name)
+        """
+        return str(self.name)
 
 
 class Element:
@@ -43,23 +66,21 @@ class Element:
     y: float
     v_x: float
     v_y: float
-    r: float
-    rx: float
-    ry: float
+    r: float = 10
     color: str
     kind: str
     time_of_life = 1
+    rx: float = r * (1 - np.sin(time_of_life * 180 / np.pi) / 4)
+    ry: float = r * (1 + np.sin(time_of_life * 180 / np.pi) / 4)
 
     def __init__(self):
         create(self)
 
     def moving(self):
-        """проверяет шарик на соудорение со стеной или баги и проверка времени жизни"""
+        """двигает элемент, проверяет на соудорение со стеной или баги и проверка времени жизни"""
         t = 0.5
         self.x += t * self.v_x
         self.y += t * self.v_y
-        self.rx = self.r * (1 - np.sin(self.time_of_life * 180 / np.pi) / 4)
-        self.ry = self.r * (1 + np.sin(self.time_of_life * 180 / np.pi) / 4)
         if self.kind == "ball":
             if self.x <= self.r:
                 self.x = self.r
@@ -74,6 +95,8 @@ class Element:
                 self.y = HEIGHT - self.r
                 self.v_y = randint(-20, -1)
         if self.kind == "ellipse":
+            self.rx = self.r * (1 - np.sin(self.time_of_life * 180 / np.pi) / 4)
+            self.ry = self.r * (1 + np.sin(self.time_of_life * 180 / np.pi) / 4)
             self.time_of_life -= 0.001
             if self.x <= self.rx:
                 self.x = self.rx
@@ -92,34 +115,30 @@ class Element:
             self.time_of_life = 1
 
     def rendering(self):
+        """Отрисовывает элемент"""
         if self.kind == "ball":
             circle(screen, self.color, (self.x, self.y), self.r)
         elif self.kind == "ellipse":
             ellipse(screen, self.color, (self.x - self.rx, self.y - self.ry, 2 * self.rx, 2 * self.ry))
 
-    def points(self, player):
+    def click(self, gamer):
+        """Проверка попал ли игрок по элементу, добавление очков и создание нового при попадании"""
         if self.kind == "ball":
             if abs(event.pos[1] - self.y) < self.r and abs(event.pos[0] - self.x) < self.r:
-                player.add_points(1)
+                gamer.add_points(1)
                 create(self)
 
         if self.kind == "ellipse":
             c: float = abs(self.rx ** 2 - self.ry ** 2) ** 0.5
             if self.rx >= self.ry:
-                F1: float = self.x - c
-                F2: float = self.x + c
-                F: float = self.y
-                if ((event.pos[1] - F) ** 2 + (event.pos[0] - F2) ** 2) ** 0.5 + (
-                        (event.pos[1] - F) ** 2 + (event.pos[0] - F1) ** 2) ** 0.5 <= 2 * self.rx:
-                    player.add_points(5)
+                if ((event.pos[1] - self.y) ** 2 + (event.pos[0] - self.x - c) ** 2) ** 0.5 + (
+                        (event.pos[1] - self.y) ** 2 + (event.pos[0] - self.x + c) ** 2) ** 0.5 <= 2 * self.rx:
+                    gamer.add_points(5)
                     create(self)
             else:
-                F1: float = self.y - c
-                F2: float = self.y + c
-                F: float = self.x
-                if ((event.pos[0] - F) ** 2 + (event.pos[1] - F2) ** 2) ** 0.5 + (
-                        (event.pos[0] - F) ** 2 + (event.pos[1] - F1) ** 2) ** 0.5 <= 2 * self.ry:
-                    player.add_points(5)
+                if ((event.pos[0] - self.x) ** 2 + (event.pos[1] - self.y - c) ** 2) ** 0.5 + (
+                        (event.pos[0] - self.x) ** 2 + (event.pos[1] - self.y + c) ** 2) ** 0.5 <= 2 * self.ry:
+                    gamer.add_points(5)
                     create(self)
 
 
@@ -152,16 +171,74 @@ def create(element):
         element.color = COLORS[randint(0, 5)]
 
 
+def file_work(gamer, filename):
+    names = []
+    score = []
+
+    def readfile():
+        """
+        Reade data by filename, and  write it in name[] and score[]
+        """
+        f = open(filename, 'r')
+        for q in range(5):
+            names.append(str(f.readline(3)))
+            f.readline()
+            score.append(int(f.readline()))
+        f.close()
+
+    def rescore():
+        """Checks if the old record holder set a new record and if not puts the current player in last place in the ranking if he broke the record holder's record"""
+        re_score = False
+        for q in range(5):
+            if names[q] == gamer.say_name() and gamer.points() > score[q]:
+                score[q] = gamer.points()
+                names[q] = gamer.say_name()
+                re_score = True
+        if not re_score and score[4] <= gamer.points():
+            score[4] = gamer.points()
+            names[4] = gamer.say_name()
+
+    def sort():
+        """one piece bubble sort"""
+        for q in range(4, 0, -1):
+            if score[q] >= score[q - 1]:
+                tup = score[q]
+                score[q] = score[q - 1]
+                score[q - 1] = tup
+
+                tup = names[q]
+                names[q] = names[q - 1]
+                names[q - 1] = tup
+
+    def writefile():
+        """code:
+        f = open(filename, 'w')
+        for q in range(5):
+            f.write(names[q] + "\n")
+            f.write(str(score[q]) + "\n")
+        """
+        f = open(filename, 'w')
+        for q in range(5):
+            f.write(names[q] + "\n")
+            f.write(str(score[q]) + "\n")
+        f.close()
+
+    readfile()
+    rescore()
+    sort()
+    writefile()
+
+
 pygame.display.update()
 clock = pygame.time.Clock()
 finished = False
 A = []
-Max = Player()
+player = Player()
 
 for i in range(N):
     A.append(Element())
-
-while not finished:
+start_ticks = pygame.time.get_ticks()
+while (pygame.time.get_ticks() - start_ticks) / 1000 < 60 and not finished:
     clock.tick(FPS)
 
     for i in range(N):
@@ -172,8 +249,11 @@ while not finished:
             finished = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
             for i in range(N):
-                A[i].points(Max)
+                A[i].click(player)
     pygame.display.update()
     screen.fill(BLACK)
-print(Max.points())
+
 pygame.quit()
+print("say your nickname of 3 characters")
+player.rename()
+file_work(player, 'data.txt')
