@@ -254,6 +254,6 @@ while (pygame.time.get_ticks() - start_ticks) / 1000 < 60 and not finished:
     screen.fill(BLACK)
 
 pygame.quit()
-print("say your nickname of 3 characters")
+print("say your nickname of 3 characters:")
 player.rename()
 file_work(player, 'data.txt')
